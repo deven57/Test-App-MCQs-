@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <h3>Result - {{ test.title }}</h3>
+    <p><strong>Name:</strong> {{ submission.name }}</p>
+    <p><strong>Score:</strong> {{ score }}</p>
+    <p><strong>Shareable Referral Link:</strong></p>
+    <div class="alert alert-info">
+      {{ request.url_root.rstrip('/') }}{{ url_for('student_form', test_id=test.id) }}?ref={{ refcode }}
+    </div>
+    <a class="btn btn-primary" href="{{ url_for('index') }}">Back to Home</a>
+  </div>
+</div>
+{% endblock %}

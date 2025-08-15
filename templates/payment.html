@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <h3>Payment for {{ test.title }}</h3>
+    <p>Name: {{ name }} | Mobile: {{ mobile }}</p>
+    <p>Amount to pay: <strong>₹{{ '%.2f'|format(payable) }}</strong></p>
+
+    <button id="rzp-button" class="btn btn-primary">Pay with Razorpay</button>
+    <form id="frm" method="post" action="{{ url_for('payment_success') }}" style="display:none;">
+      <input type="hidden" name="razorpay_payment_id" id="razorpay_payment_id">
+      <input type="hidden" name="razorpay_order_id" id="razorpay_order_id">
+      <input type="hidden" name="razorpay_signature" id="razorpay_signature">
+      <input type="hidden" name="submission_id" value="{{ submission_id }}">
+    </form>
+  </div>
+</div>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+  const options = {
+    "key": "{{ razor_key }}",
+    "amount": "{{ order.amount }}",
+    "currency": "{{ order.currency }}",
+    "name": "{{ test.title }}",
+    "order_id": "{{ order.id }}",
+    "handler": function (response){
+      document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id;
+      document.getElementById('razorpay_order_id').value = response.razorpay_order_id;
+      document.getElementById('razorpay_signature').value = response.razorpay_signature;
+      // Submit verification to server
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "{{ url_for('payment_success') }}", true);
+      var formData = new FormData();
+      formData.append("razorpay_payment_id", response.razorpay_payment_id);
+      formData.append("razorpay_order_id", response.razorpay_order_id);
+      formData.append("razorpay_signature", response.razorpay_signature);
+      formData.append("submission_id", "{{ submission_id }}");
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          var resp = JSON.parse(xhr.responseText);
+          if (resp.status == "ok") {
+            window.location = resp.redirect;
+          } else {
+            alert("Payment verification failed");
+          }
+        } else {
+          alert("Server error while verifying payment");
+        }
+      };
+      xhr.send(formData);
+    },
+    "prefill": {
+      "name": "{{ name }}",
+      "contact": "{{ mobile }}"
+    },
+    "theme": {
+      "color": "#0d6efd"
+    }
+  };
+  var rzp1 = new Razorpay(options);
+  document.getElementById('rzp-button').onclick = function(e){
+    rzp1.open();
+    e.preventDefault();
+  }
+</script>
+{% endblock %}

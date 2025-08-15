@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Submissions for: {{ test.title if test else '' }}</h3>
+<p><a class="btn btn-outline-secondary mb-3" href="{{ url_for('admin_download_submissions', test_id=test.id) }}">Download All as CSV</a></p>
+<table class="table table-sm">
+  <thead><tr><th>Id</th><th>Name</th><th>Mobile</th><th>Institute</th><th>Paid</th><th>Score</th><th>Created</th></tr></thead>
+  <tbody>
+    {% for s in submissions %}
+    <tr>
+      <td>{{ s.id }}</td>
+      <td>{{ s.name }}</td>
+      <td>{{ s.mobile }}</td>
+      <td>{{ s.institute }}</td>
+      <td>{{ 'Yes' if s.paid else 'No' }}</td>
+      <td>{{ s.score if s.score is not none else '-' }}</td>
+      <td>{{ s.created_at }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7">No submissions</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

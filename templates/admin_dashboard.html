@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Admin Dashboard</h3>
+  <div>
+    <a class="btn btn-secondary" href="{{ url_for('admin_upload') }}">Upload Test</a>
+    <a class="btn btn-outline-danger" href="{{ url_for('admin_logout') }}">Logout</a>
+  </div>
+</div>
+
+<h5>Tests</h5>
+<table class="table table-striped">
+  <thead><tr><th>Title</th><th>Price (INR)</th><th>Actions</th></tr></thead>
+  <tbody>
+    {% for t in tests %}
+    <tr>
+      <td>{{ t.title }}</td>
+      <td>₹{{ '%.2f'|format(t.price_inr) }}</td>
+      <td>
+        <a class="btn btn-sm btn-primary" href="{{ url_for('admin_view_submissions', test_id=t.id) }}">View Submissions</a>
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin_download_submissions', test_id=t.id) }}">Download CSV</a>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3">No tests</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h5 class="mt-4">Coupons</h5>
+<table class="table">
+  <thead><tr><th>Code</th><th>Owner</th><th>Discount</th><th>Used</th></tr></thead>
+  <tbody>
+  {% for c in coupons %}
+    <tr>
+      <td>{{ c.code }}</td>
+      <td>{{ c.owner_submission_id }}</td>
+      <td>{{ c.discount_percent }}%</td>
+      <td>{{ 'Yes' if c.used else 'No' }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="4">No coupons</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

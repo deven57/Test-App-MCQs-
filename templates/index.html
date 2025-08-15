@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <h2>Available Tests</h2>
+    <div class="list-group">
+      {% for test in tests %}
+      <div class="list-group-item d-flex justify-content-between align-items-center flex-column flex-sm-row">
+        <div>
+          <h5 class="mb-1">{{ test.title }}</h5>
+          <small class="text-muted">Price: ₹{{ '%.2f'|format(test.price_inr) }}</small>
+        </div>
+        <div class="mt-3 mt-sm-0">
+          <a class="btn btn-primary" href="{{ url_for('student_form', test_id=test.id) }}">Pay & Start</a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('student_form', test_id=test.id) }}?ref=REFCODE">Get Shareable Link</a>
+        </div>
+      </div>
+      {% else %}
+      <div class="list-group-item">
+        <p>No tests available. Admin can upload tests.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

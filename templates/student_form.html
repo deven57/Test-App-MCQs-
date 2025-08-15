@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <h3>Student Information - {{ test.title }}</h3>
+    <form method="post">
+      <input type="hidden" name="ref" value="{{ ref }}">
+      <div class="mb-3">
+        <label class="form-label">Full Name *</label>
+        <input class="form-control" name="name" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Mobile Number *</label>
+        <input class="form-control" name="mobile" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Coaching Institute (optional)</label>
+        <input class="form-control" name="institute">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Permanent Address (optional)</label>
+        <textarea class="form-control" name="address"></textarea>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Coupon Code (optional)</label>
+        <input class="form-control" name="coupon">
+      </div>
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <strong>Price:</strong> ₹{{ '%.2f'|format(test.price_inr) }}
+          {% if demo %}
+            <span class="badge bg-info">Demo mode (no payment)</span>
+          {% endif %}
+        </div>
+        <button class="btn btn-success">Continue to Payment / Start</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
