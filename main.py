@@ -2,14 +2,12 @@ import os
 import csv
 import json
 import uuid
-import hmac
-import hashlib
 from datetime import datetime
 from functools import wraps
 
 from flask import (
     Flask, render_template, request, redirect, url_for, flash, session,
-    send_file, jsonify, make_response
+    send_file, jsonify
 )
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -45,6 +43,7 @@ TESTS_FILE = os.path.join(DATA_DIR, "tests.json")
 SUBMISSIONS_FILE = os.path.join(DATA_DIR, "submissions.json")
 COUPONS_FILE = os.path.join(DATA_DIR, "coupons.json")
 
+
 def _load_json(path, default):
     if not os.path.exists(path):
         with open(path, "w") as f:
@@ -61,23 +60,30 @@ def _save_json(path, data):
     with open(path, "w") as f:
         json.dump(data, f, indent=2, default=str)
 
+
 def load_tests():
     return _load_json(TESTS_FILE, [])
+
 
 def save_tests(tests):
     _save_json(TESTS_FILE, tests)
 
+
 def load_submissions():
     return _load_json(SUBMISSIONS_FILE, [])
+
 
 def save_submissions(subs):
     _save_json(SUBMISSIONS_FILE, subs)
 
+
 def load_coupons():
     return _load_json(COUPONS_FILE, [])
 
+
 def save_coupons(coupons):
     _save_json(COUPONS_FILE, coupons)
+
 
 def admin_required(f):
     @wraps(f)
@@ -86,6 +92,7 @@ def admin_required(f):
             return redirect(url_for("admin_login", next=request.path))
         return f(*args, **kwargs)
     return decorated
+
 
 # Razorpay client
 razor_client = None
@@ -96,12 +103,15 @@ if not DEMO_MODE:
         razor_client = None
         DEMO_MODE = True
 
+
 @app.route("/")
 def index():
     tests = load_tests()
     return render_template("index.html", tests=tests, demo=DEMO_MODE)
 
-@app.route("/admin/login", methods=["GET", "POST"])\
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
     if request.method == "POST":
         pwd = request.form.get("password", "")
         if pwd == ADMIN_PASS:
@@ -112,11 +122,13 @@ def index():
             flash("Incorrect password", "danger")
     return render_template("admin_login.html")
 
+
 @app.route("/admin/logout")
 def admin_logout():
     session.pop("admin", None)
     flash("Logged out", "info")
     return redirect(url_for("admin_login"))
+
 
 @app.route("/admin")
 @admin_required
@@ -125,6 +137,7 @@ def admin_dashboard():
     submissions = load_submissions()
     coupons = load_coupons()
     return render_template("admin_dashboard.html", tests=tests, submissions=submissions, coupons=coupons)
+
 
 @app.route("/admin/upload", methods=["GET", "POST"])
 @admin_required
@@ -150,7 +163,7 @@ def admin_upload():
         # Validate CSV headers
         stream = file.stream.read().decode("utf-8").splitlines()
         reader = csv.DictReader(stream)
-        required = {"question","option_a","option_b","option_c","option_d","answer"}
+        required = {"question", "option_a", "option_b", "option_c", "option_d", "answer"}
         if not required.issubset(set([h.strip() for h in reader.fieldnames or []])):
             flash("CSV must contain headers: question,option_a,option_b,option_c,option_d,answer", "danger")
             return redirect(request.url)
@@ -173,35 +186,37 @@ def admin_upload():
         return redirect(url_for("admin_dashboard"))
     return render_template("upload_test.html")
 
+
 @app.route("/admin/test/<test_id>/submissions")
 @admin_required
 def admin_view_submissions(test_id):
-    submissions = [s for s in load_submissions() if s.get("test_id")==test_id]
+    submissions = [s for s in load_submissions() if s.get("test_id") == test_id]
     tests = load_tests()
-    test = next((t for t in tests if t["id"]==test_id), None)
+    test = next((t for t in tests if t["id"] == test_id), None)
     return render_template("admin_view_submissions.html", submissions=submissions, test=test)
+
 
 @app.route("/admin/test/<test_id>/download")
 @admin_required
 def admin_download_submissions(test_id):
-    subs = [s for s in load_submissions() if s.get("test_id")==test_id]
+    subs = [s for s in load_submissions() if s.get("test_id") == test_id]
     tests = load_tests()
-    test = next((t for t in tests if t["id"]==test_id), None)
+    test = next((t for t in tests if t["id"] == test_id), None)
     csv_rows = []
-    headers = ["submission_id","name","mobile","institute","address","paid","payment_id","score","created_at","ref_used","coupon_used"]
+    headers = ["submission_id", "name", "mobile", "institute", "address", "paid", "payment_id", "score", "created_at", "ref_used", "coupon_used"]
     for s in subs:
         csv_rows.append({
             "submission_id": s.get("id"),
             "name": s.get("name"),
             "mobile": s.get("mobile"),
-            "institute": s.get("institute",""),
-            "address": s.get("address",""),
+            "institute": s.get("institute", ""),
+            "address": s.get("address", ""),
             "paid": s.get("paid", False),
-            "payment_id": s.get("payment_id",""),
-            "score": s.get("score",""),
-            "created_at": s.get("created_at",""),
+            "payment_id": s.get("payment_id", ""),
+            "score": s.get("score", ""),
+            "created_at": s.get("created_at", ""),
             "ref_used": s.get("ref", ""),
-            "coupon_used": s.get("coupon_used","")
+            "coupon_used": s.get("coupon_used", "")
         })
     # create CSV in-memory
     from io import StringIO, BytesIO
@@ -216,20 +231,21 @@ def admin_download_submissions(test_id):
     filename = f"submissions_{test['title'] if test else test_id}.csv"
     return send_file(mem, as_attachment=True, download_name=filename, mimetype="text/csv")
 
+
 @app.route("/student_form/<test_id>", methods=["GET", "POST"])
 def student_form(test_id):
     tests = load_tests()
-    test = next((t for t in tests if t["id"]==test_id), None)
+    test = next((t for t in tests if t["id"] == test_id), None)
     if not test:
         flash("Test not found", "danger")
         return redirect(url_for("index"))
     ref = request.args.get("ref") or request.form.get("ref") or ""
     if request.method == "POST":
-        name = request.form.get("name","").strip()
-        mobile = request.form.get("mobile","").strip()
-        institute = request.form.get("institute","").strip()
-        address = request.form.get("address","").strip()
-        coupon_code = request.form.get("coupon","").strip()
+        name = request.form.get("name", "").strip()
+        mobile = request.form.get("mobile", "").strip()
+        institute = request.form.get("institute", "").strip()
+        address = request.form.get("address", "").strip()
+        coupon_code = request.form.get("coupon", "").strip()
         if not name or not mobile:
             flash("Full name and mobile are required", "warning")
             return redirect(request.url)
@@ -256,11 +272,11 @@ def student_form(test_id):
         apply_discount = 0.0
         coupons = load_coupons()
         if coupon_code:
-            c = next((c for c in coupons if c["code"]==coupon_code and not c.get("used", False)), None)
+            c = next((c for c in coupons if c["code"] == coupon_code and not c.get("used", False)), None)
             if c:
                 apply_discount = float(c.get("discount_percent", 0.0))
         price = float(test.get("price_inr", 0.0))
-        payable = max(0.0, price * (1 - apply_discount/100.0))
+        payable = max(0.0, price * (1 - apply_discount / 100.0))
         # If demo mode or payable == 0 => skip payment
         if DEMO_MODE or payable <= 0:
             # Mark paid, possibly mark coupon used (if any)
@@ -317,6 +333,7 @@ def student_form(test_id):
     # GET
     return render_template("student_form.html", test=test, ref=ref)
 
+
 @app.route("/payment/success", methods=["POST"])
 def payment_success():
     # Razorpay will POST payment details via frontend JS; verify signature
@@ -327,7 +344,7 @@ def payment_success():
     signature = payload.get("razorpay_signature")
     submission_id = payload.get("submission_id")
     if not (payment_id and order_id and signature and submission_id):
-        return jsonify({"status":"error","message":"Missing payment data"}), 400
+        return jsonify({"status": "error", "message": "Missing payment data"}), 400
     # Verify signature using razorpay util if available
     verified = False
     if not DEMO_MODE and razor_client:
@@ -339,13 +356,13 @@ def payment_success():
             }
             razor_client.utility.verify_payment_signature(params_dict)
             verified = True
-        except Exception as e:
+        except Exception:
             verified = False
     else:
         # Demo: accept
         verified = True
     if not verified:
-        return jsonify({"status":"error","message":"Signature verification failed"}), 400
+        return jsonify({"status": "error", "message": "Signature verification failed"}), 400
     # Mark submission paid
     submissions = load_submissions()
     for s in submissions:
@@ -357,7 +374,7 @@ def payment_success():
             break
     save_submissions(submissions)
     # Mark coupon used if any
-    coupon_code = next((s.get("coupon_used","") for s in submissions if s["id"]==submission_id), "")
+    coupon_code = next((s.get("coupon_used", "") for s in submissions if s["id"] == submission_id), "")
     if coupon_code:
         coupons = load_coupons()
         for c in coupons:
@@ -367,20 +384,21 @@ def payment_success():
     # Award referral coupon to referrer if applicable
     maybe_award_referrer_coupon(submission_id)
     # Return success (frontend will redirect to take_test)
-    return jsonify({"status":"ok","redirect": url_for("take_test", test_id=s["test_id"], sid=submission_id)})
+    return jsonify({"status": "ok", "redirect": url_for("take_test", test_id=s["test_id"], sid=submission_id)})
+
 
 def maybe_award_referrer_coupon(new_submission_id):
     # If the new paid submission used ref and ref maps to an existing submission id,
     # award a 50% coupon to the referrer (stored in coupons.json)
     subs = load_submissions()
-    new_sub = next((s for s in subs if s["id"]==new_submission_id), None)
+    new_sub = next((s for s in subs if s["id"] == new_submission_id), None)
     if not new_sub or not new_sub.get("paid"):
         return
     ref = new_sub.get("ref")
     if not ref:
         return
     # Ensure ref exists
-    ref_sub = next((s for s in subs if s["id"]==ref), None)
+    ref_sub = next((s for s in subs if s["id"] == ref), None)
     if not ref_sub:
         return
     # Do not award if referrer is the same person
@@ -388,7 +406,7 @@ def maybe_award_referrer_coupon(new_submission_id):
         return
     coupons = load_coupons()
     # Award one coupon per successful referral (no duplicate coupon per (referrer, referred) pair)
-    exists = any(c for c in coupons if c.get("owner_submission_id")==ref and c.get("referred_submission_id")==new_submission_id)
+    exists = any(c for c in coupons if c.get("owner_submission_id") == ref and c.get("referred_submission_id") == new_submission_id)
     if exists:
         return
     coupon_code = f"CPN-{uuid.uuid4().hex[:8].upper()}"
@@ -403,11 +421,12 @@ def maybe_award_referrer_coupon(new_submission_id):
     coupons.append(coupon)
     save_coupons(coupons)
 
+
 @app.route("/take_test/<test_id>")
 def take_test(test_id):
     sid = request.args.get("sid") or request.args.get("submission_id") or session.get("submission_id")
     tests = load_tests()
-    test = next((t for t in tests if t["id"]==test_id), None)
+    test = next((t for t in tests if t["id"] == test_id), None)
     if not test:
         flash("Test not found", "danger")
         return redirect(url_for("index"))
@@ -415,7 +434,7 @@ def take_test(test_id):
         flash("Submission/session missing. Start test flow from homepage.", "warning")
         return redirect(url_for("student_form", test_id=test_id))
     subs = load_submissions()
-    submission = next((s for s in subs if s["id"]==sid and s["test_id"]==test_id), None)
+    submission = next((s for s in subs if s["id"] == sid and s["test_id"] == test_id), None)
     if not submission:
         flash("Submission record not found", "danger")
         return redirect(url_for("student_form", test_id=test_id))
@@ -431,15 +450,16 @@ def take_test(test_id):
         for idx, row in enumerate(reader, start=1):
             questions.append({
                 "qid": idx,
-                "question": row.get("question",""),
+                "question": row.get("question", ""),
                 "options": {
-                    "A": row.get("option_a",""),
-                    "B": row.get("option_b",""),
-                    "C": row.get("option_c",""),
-                    "D": row.get("option_d","")
+                    "A": row.get("option_a", ""),
+                    "B": row.get("option_b", ""),
+                    "C": row.get("option_c", ""),
+                    "D": row.get("option_d", "")
                 }
             })
     return render_template("take_test.html", test=test, questions=questions, submission=submission)
+
 
 @app.route("/submit_test/<test_id>", methods=["POST"])
 def submit_test(test_id):
@@ -448,19 +468,19 @@ def submit_test(test_id):
         flash("Submission id missing", "danger")
         return redirect(url_for("index"))
     subs = load_submissions()
-    submission = next((s for s in subs if s["id"]==sid and s["test_id"]==test_id), None)
+    submission = next((s for s in subs if s["id"] == sid and s["test_id"] == test_id), None)
     if not submission:
         flash("Submission not found", "danger")
         return redirect(url_for("index"))
     # Load correct answers
     tests = load_tests()
-    test = next((t for t in tests if t["id"]==test_id), None)
+    test = next((t for t in tests if t["id"] == test_id), None)
     quiz_path = os.path.join(QUIZ_DIR, test["filename"])
     correct = {}
     with open(quiz_path, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for idx, row in enumerate(reader, start=1):
-            correct[str(idx)] = row.get("answer","”).strip().upper()
+            correct[str(idx)] = row.get("answer", "").strip().upper()
     # Collect answers
     answers = {}
     score = 0
@@ -485,11 +505,13 @@ def submit_test(test_id):
     refcode = sid
     return render_template("result.html", score=score, submission=submission, test=test, refcode=refcode)
 
+
 @app.route("/coupons")
 def coupons_view():
     # Public endpoint to view coupons for demonstration (not required)
     coupons = load_coupons()
     return jsonify(coupons)
+
 
 # Serve uploaded CSV sample or quiz files (admin only)
 @app.route("/quizzes/<filename>")
@@ -501,10 +523,12 @@ def serve_quiz_file(filename):
     else:
         return "Not found", 404
 
+
 # Static health-check
 @app.route("/health")
 def health():
     return "ok"
+
 
 if __name__ == "__main__":
     import os
